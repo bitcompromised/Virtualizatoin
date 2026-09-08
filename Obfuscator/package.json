@@ -1,0 +1,15 @@
+{
+  "name": "obfuscator",
+  "version": "1.0.0",
+  "description": "CLI that strips comments, minifies, renames variables, encodes/compresses strings, and applies control-flow obfuscation to JavaScript.",
+  "type": "commonjs",
+  "bin": {
+    "obfuscate": "obfuscate.js"
+  },
+  "scripts": {
+    "start": "node obfuscate.js"
+  },
+  "dependencies": {
+    "javascript-obfuscator": "^4.1.1"
+  }
+}

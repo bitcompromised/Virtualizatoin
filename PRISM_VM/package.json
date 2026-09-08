@@ -1,0 +1,15 @@
+{
+  "name": "@prism/core",
+  "version": "0.0.1",
+  "description": "Prism -- a spec-driven, plugin-based bytecode-virtualization obfuscator. One opcode spec generates every backend. Successor to vm-gen.",
+  "main": "src/index.js",
+  "bin": { "prism": "src/cli.js" },
+  "scripts": {
+    "test": "node test/conformance.js && node test/sdk.test.js",
+    "fuzz": "node test/fuzz.js",
+    "run-example": "node src/cli.js run examples/fib.js"
+  },
+  "keywords": ["vm", "bytecode", "virtualization", "obfuscation", "compiler", "plugin", "spec-driven"],
+  "license": "MIT",
+  "engines": { "node": ">=14" }
+}

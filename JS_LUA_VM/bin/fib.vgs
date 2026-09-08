@@ -1,0 +1,11 @@
+// Recursive Fibonacci -- exercises functions, recursion and branching.
+fn fib(n) {
+  if (n < 2) { return n; }
+  return fib(n - 1) + fib(n - 2);
+}
+
+let i = 0;
+while (i <= 10) {
+  print "fib(" + str(i) + ") = " + str(fib(i));
+  i = i + 1;
+}

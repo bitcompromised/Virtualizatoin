@@ -1,0 +1,37 @@
+{
+  "name": "vm-gen",
+  "version": "0.2.0",
+  "description": "Generate self-contained, per-build-unique protected virtual machines in JavaScript and Lua from a small source language, using bytecode virtualization and code-protection techniques.",
+  "main": "index.js",
+  "bin": {
+    "vm-gen": "bin/vm-gen.js"
+  },
+  "scripts": {
+    "test": "node test/run.js && node test/known-good.js",
+    "fuzz": "node test/fuzz.js",
+    "benchmark": "node bin/vm-gen.js benchmark examples/fib.vgs --seed 1",
+    "example:js": "node bin/vm-gen.js build examples/fib.vgs -t js -o examples/fib.vm.js && node examples/fib.vm.js",
+    "example:lua": "node bin/vm-gen.js build examples/fib.vgs -t lua -o examples/fib.vm.lua"
+  },
+  "keywords": [
+    "vm",
+    "bytecode",
+    "virtualization",
+    "obfuscation",
+    "code-protection",
+    "lua",
+    "javascript",
+    "compiler"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=14"
+  },
+  "devDependencies": {
+    "fengari": "^0.1.4"
+  },
+  "dependencies": {
+    "acorn": "^8.18.0",
+    "javascript-obfuscator": "^5.6.0"
+  }
+}

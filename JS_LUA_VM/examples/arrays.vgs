@@ -1,0 +1,15 @@
+// Arrays, indexing, loops and host builtins.
+let xs = [10, 20, 30, 40];
+let sum = 0;
+let i = 0;
+while (i < len(xs)) {
+  sum = sum + xs[i];
+  i = i + 1;
+}
+print "array = " + str(xs);
+print "sum = " + str(sum);
+
+xs[1] = 99;
+xs = push(xs, 50);
+print "mutated = " + str(xs);
+print "len = " + str(len(xs));

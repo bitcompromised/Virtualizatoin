@@ -1,0 +1,156 @@
+vm-gen build summary
+================================================================
+
+## Configuration
+  target        js
+  profile       balanced
+  architecture  stack-switch
+  format        2.0   protection v2
+  optimize      true
+  permute       randomized
+  flatten CF    false
+  bogus CF      off
+  split blocks  false
+  cipher rounds 1 per function
+  fuse opcodes  false
+  conceal ints  false
+  encrypt str   off
+  encrypt num   off
+  dead-code     0 decoy function(s)
+  seeds/perm    derived (not stored in payload)
+  rename all    on
+  signed        false
+  limits        steps=0 depth=1024 objects=0 string=0
+
+## Source (input)
+----------------------------------------------------------------
+// Recursive Fibonacci -- exercises functions, recursion and branching.
+fn fib(n) {
+  if (n < 2) { return n; }
+  return fib(n - 1) + fib(n - 2);
+}
+
+let i = 0;
+while (i <= 10) {
+  print "fib(" + str(i) + ") = " + str(fib(i));
+  i = i + 1;
+}
+
+## Symbol rename table (original -> obfuscated)
+----------------------------------------------------------------
+  $main                    -> _Vx6zwJ8l6Xy
+  fib                      -> _BHktYz6
+
+## Functions
+----------------------------------------------------------------
+#0  $main   <vm>   (compiled as: _Vx6zwJ8l6Xy)
+    identity vm | params 0 | locals 0 | level weak
+    scope: (none)
+    bytecode:
+         0  PUSH_CONST  0
+         2  PUSH_CONST  1
+         4  CALL_HOST  2, 2
+         7  POP
+         8  PUSH_CONST  0
+        10  CALL_HOST  3, 1
+        13  PUSH_CONST  4
+        15  LTE
+        16  JZ  83
+        18  PUSH_CONST  5
+        20  PUSH_CONST  0
+        22  CALL_HOST  3, 1
+        25  CALL_HOST  6, 1
+        28  ADD
+        29  PUSH_CONST  7
+        31  ADD
+        32  PUSH_CONST  0
+        34  CALL_HOST  3, 1
+        37  CALL  1, 1
+        40  CALL_HOST  6, 1
+        43  ADD
+        44  PRINT
+        45  PUSH_CONST  0
+        47  PUSH_CONST  0
+        49  CALL_HOST  3, 1
+        52  PUSH_CONST  8
+        54  ADD
+        55  CALL_HOST  2, 2
+        58  POP
+        59  JMP  11
+        61  HALT
+
+#1  fib   <client>   (compiled as: _BHktYz6)
+    identity client | params 1 | locals 1 | level weak
+    scope: [0] n (param)
+    bytecode:
+         0  LOAD  0
+         2  PUSH_CONST  9
+         4  LT
+         5  JZ  14
+         7  LOAD  0
+         9  RET
+        10  LOAD  0
+        12  PUSH_CONST  8
+        14  SUB
+        15  CALL  1, 1
+        18  LOAD  0
+        20  PUSH_CONST  9
+        22  SUB
+        23  CALL  1, 1
+        26  ADD
+        27  RET
+        28  PUSH_NULL
+        29  RET
+
+## Constant pool
+----------------------------------------------------------------
+  [0] "i"
+  [1] 0
+  [2] "__setglobal"
+  [3] "__getglobal"
+  [4] 10
+  [5] "fib("
+  [6] "str"
+  [7] ") = "
+  [8] 1
+  [9] 2
+
+## Added code (what protection generated)
+----------------------------------------------------------------
+  obfuscation passes   +0 instructions total (flat/bogus/split/close-upvalue)
+
+  (no control-flow passes active - enable <@flat>/<@bogus>/<@split> or --flatten/--bogus/--split)
+
+  decoy functions      0 (enable with --dud or the aggressive profile)
+  symbol renaming      2 names -> opaque randoms
+  VM randomization     internal VM identifiers randomized + minified per build
+
+## Recognized bytecode patterns
+----------------------------------------------------------------
+  Hot adjacent-opcode sequences (fusion / opcode-randomization candidates).
+  fusion: off
+  top bigrams:
+       5x  PUSH_CONST CALL_HOST
+       3x  PUSH_CONST PUSH_CONST
+       3x  LOAD PUSH_CONST
+       2x  CALL_HOST POP
+       2x  CALL_HOST PUSH_CONST
+       2x  CALL_HOST ADD
+       2x  ADD PUSH_CONST
+       2x  PUSH_CONST ADD   -> CONSTADD
+       2x  PUSH_CONST SUB
+       2x  SUB CALL
+  top trigrams:
+       3x  PUSH_CONST PUSH_CONST CALL_HOST
+       2x  PUSH_CONST CALL_HOST PUSH_CONST
+       2x  LOAD PUSH_CONST SUB
+       2x  PUSH_CONST SUB CALL
+
+## Statistics
+----------------------------------------------------------------
+  real functions      2
+  decoy functions     0
+  total instructions  49  (0 added by obfuscation passes)
+  constants           10
+  image size          277 bytes
+  checksum            0x825a9900  (+ 4 integrity domains)

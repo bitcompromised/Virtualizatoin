@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vm-gen control panel</title>
+<style>
+  :root {
+    --bg:#0f1116; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a; --fg:#e6e9ef;
+    --muted:#9aa4b2; --accent:#5b9dff; --accent2:#7ee0a2; --warn:#ffb454; --danger:#ff6b6b;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:13px/1.5 system-ui,Segoe UI,Roboto,sans-serif; }
+  header { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+  header h1 { font-size:15px; margin:0; font-weight:700; letter-spacing:.3px; }
+  header h1 span { color:var(--accent); }
+  .grow { flex:1; }
+  label.inl { color:var(--muted); font-size:12px; display:inline-flex; align-items:center; gap:5px; }
+  select,input[type=text],input[type=number],textarea { background:var(--panel2); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:5px 7px; font-size:12px; }
+  input[type=number]{ width:56px; } input[type=text]{ width:90px; }
+  textarea { width:100%; font-family:var(--mono); font-size:12px; resize:vertical; min-height:260px; }
+  button { background:var(--accent); color:#08101f; border:0; border-radius:6px; padding:7px 14px; font-weight:700; cursor:pointer; font-size:12px; }
+  button.ghost { background:var(--panel2); color:var(--fg); border:1px solid var(--line); font-weight:600; }
+  button:disabled { opacity:.5; cursor:default; }
+  main { display:grid; grid-template-columns: 1fr 1fr; gap:14px; padding:14px; align-items:start; }
+  @media (max-width:1100px){ main{ grid-template-columns:1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
+  .card h2 { font-size:12px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin:0 0 10px; }
+  fieldset { border:1px solid var(--line); border-radius:8px; margin:0 0 12px; padding:10px 12px; }
+  legend { color:var(--accent2); font-size:11px; text-transform:uppercase; letter-spacing:.5px; padding:0 6px; }
+  .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:6px 0; }
+  .row label { display:inline-flex; align-items:center; gap:6px; font-size:12px; }
+  .hint { color:var(--muted); font-size:11px; margin:2px 0 8px; }
+  .fnlist { display:flex; flex-direction:column; gap:8px; max-height:60vh; overflow:auto; }
+  .fn { border:1px solid var(--line); border-radius:8px; padding:8px 10px; background:var(--panel2); }
+  .fn .top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .fn .name { font-family:var(--mono); font-weight:700; }
+  .fn .idx { color:var(--muted); font-size:11px; }
+  .badge { font-size:10px; padding:1px 6px; border-radius:10px; background:#243; color:var(--accent2); }
+  .badge.g { background:#332; color:var(--warn); }
+  .scope { color:var(--muted); font-size:11px; margin:5px 0; font-family:var(--mono); }
+  .scope b { color:var(--fg); font-weight:600; }
+  .toggles { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:6px; }
+  .toggles label { font-size:11px; display:inline-flex; align-items:center; gap:4px; }
+  .out { font-family:var(--mono); font-size:12px; white-space:pre; overflow:auto; max-height:70vh; background:#0b0d12; border:1px solid var(--line); border-radius:8px; padding:10px; }
+  .tabs { display:flex; gap:6px; margin-bottom:8px; }
+  .tabs button { background:var(--panel2); color:var(--muted); border:1px solid var(--line); font-weight:600; padding:5px 12px; }
+  .tabs button.active { color:var(--fg); border-color:var(--accent); }
+  .stat { display:inline-block; margin-right:14px; color:var(--muted); font-size:12px; }
+  .stat b { color:var(--fg); }
+  .err { color:var(--danger); font-family:var(--mono); font-size:12px; white-space:pre-wrap; }
+  .bulk { font-size:11px; color:var(--muted); }
+  .bulk a { color:var(--accent); cursor:pointer; text-decoration:underline; }
+  input[type=file]{ display:none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>vm-<span>gen</span> control panel</h1>
+  <label class="inl">profile
+    <select id="profile"></select>
+  </label>
+  <label class="inl">target
+    <select id="target"><option value="js">js</option><option value="lua">lua</option></select>
+  </label>
+  <label class="inl">seed <input type="text" id="seed" placeholder="random"></label>
+  <label class="inl"><input type="checkbox" id="prod"> --prod</label>
+  <span class="grow"></span>
+  <button id="analyzeBtn" class="ghost">Analyze functions</button>
+  <button id="buildBtn">Build VM</button>
+</header>
+
+<main>
+  <div>
+    <div class="card">
+      <h2>Source</h2>
+      <div class="row">
+        <button class="ghost" id="loadBtn">Load file…</button>
+        <span id="fileName" class="hint"></span>
+      </div>
+      <textarea id="source" spellcheck="false" placeholder="// paste JS / .vgs source here"></textarea>
+      <input type="file" id="fileInput" accept=".js,.vgs,.mjs,.txt">
+    </div>
+
+    <div class="card">
+      <h2>Functions &amp; scope — per-function protection</h2>
+      <div class="hint">Toggles here override the global VM-child defaults for that one function. Indices track the current <b>optimize</b> setting; re-analyze after changing it.</div>
+      <div class="bulk" id="bulk" hidden>
+        bulk: <a data-all="flat">flatten all</a> · <a data-all="split">split all</a> ·
+        <a data-all="bogus">bogus×2 all</a> · <a data-all="clear">clear all</a>
+      </div>
+      <div class="fnlist" id="fnlist"><div class="hint">Click “Analyze functions” to list them.</div></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Settings</h2>
+      <fieldset>
+        <legend>VM-interpreter (engine + loader)</legend>
+        <div class="hint">How the virtual machine itself is generated: opcode table, handlers, and the loader shell.</div>
+        <div class="row">
+          <label><input type="checkbox" id="i_permute" checked> permute opcode table</label>
+          <label><input type="checkbox" id="i_fuse"> fuse superinstructions</label>
+          <label><input type="checkbox" id="i_conceal"> conceal integers</label>
+        </div>
+        <div class="row">
+          <label><input type="checkbox" id="i_mutate"> mutate opcode handlers</label>
+          <label>loader form
+            <select id="i_loader">
+              <option value="auto">auto (per-seed)</option>
+              <option value="compact">compact</option>
+              <option value="verbose">verbose</option>
+              <option value="split">split (many fns)</option>
+            </select>
+          </label>
+          <label>architecture
+            <select id="i_arch">
+              <option value="stack-switch">stack-switch</option>
+              <option value="register">register</option>
+              <option value="register-threaded">register-threaded</option>
+              <option value="register-encrypted">register-encrypted</option>
+            </select>
+          </label>
+        </div>
+        <div class="row">
+          <label>cipher rounds (default)
+            <select id="i_cipher"><option value="">profile</option><option>0</option><option>1</option><option>2</option><option>3</option></select>
+          </label>
+          <label><input type="checkbox" id="i_randomize" checked> randomize identifiers</label>
+          <label><input type="checkbox" id="i_minify" checked> minify</label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>VM-child (guest program)</legend>
+        <div class="hint">How the code running <i>inside</i> the VM is protected. These are the global defaults; per-function toggles win.</div>
+        <div class="row">
+          <label><input type="checkbox" id="c_flatten"> flatten CF (all fns)</label>
+          <label><input type="checkbox" id="c_split"> split blocks (all fns)</label>
+          <label>bogus CF
+            <select id="c_bogus"><option>0</option><option>1</option><option selected>0</option><option>2</option><option>3</option></select>
+          </label>
+        </div>
+        <div class="row">
+          <label>encrypt strings
+            <select id="c_encstr"><option>none</option><option>str_arr</option><option>hex</option><option>bytecode</option><option>random</option><option>tree</option></select>
+          </label>
+          <label><input type="checkbox" id="c_encnum"> encrypt numbers</label>
+          <label><input type="checkbox" id="c_dud"> decoy functions</label>
+          <label>count <input type="number" id="c_dudcount" min="0" max="64" value="4"></label>
+        </div>
+        <div class="row">
+          <label><input type="checkbox" id="c_rename" checked> rename symbols</label>
+          <label><input type="checkbox" id="c_optimize" checked> optimize</label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Runtime limits &amp; signing</legend>
+        <div class="hint">Resource caps enforced at runtime (0 = unlimited); a sign key gates the VM to <code>VMGEN_KEY</code>.</div>
+        <div class="row">
+          <label>max steps <input type="number" id="r_steps" min="0" value="0"></label>
+          <label>max depth <input type="number" id="r_depth" min="0" value="0"></label>
+        </div>
+        <div class="row">
+          <label>max objects <input type="number" id="r_objects" min="0" value="0"></label>
+          <label>max string <input type="number" id="r_string" min="0" value="0"></label>
+        </div>
+        <div class="row">
+          <label>sign key <input type="text" id="r_sign" placeholder="(none)"></label>
+        </div>
+      </fieldset>
+    </div>
+
+    <div class="card">
+      <h2>Result</h2>
+      <div id="stats" class="hint">Build to see output.</div>
+      <div class="tabs">
+        <button data-tab="summary" class="active">Summary</button>
+        <button data-tab="map">Map</button>
+        <button data-tab="added">Added</button>
+        <button data-tab="source">VM source</button>
+        <button data-tab="error">Errors</button>
+        <button class="ghost" id="dlBtn" style="margin-left:auto">Download VM</button>
+      </div>
+      <div id="tab-summary" class="out"></div>
+      <div id="tab-map" class="out" hidden></div>
+      <div id="tab-added" class="out" hidden></div>
+      <div id="tab-source" class="out" hidden></div>
+      <div id="tab-error" class="err" hidden></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let lastOutput = '', lastAnalyzeOptimize = null, lastAnalysis = null;
+const perFn = {}; // index -> {flatten,split,bogus,protLevel}
+
+async function api(url, body) {
+  const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  return r.json();
+}
+function optimizeOn(){ return $('c_optimize').checked; }
+
+async function init(){
+  const r = await (await fetch('/initial')).json();
+  $('profile').innerHTML = r.profiles.map(p=>`<option${p==='balanced'?' selected':''}>${p}</option>`).join('');
+  if (r.source) { $('source').value = r.source; $('fileName').textContent = r.file; }
+}
+init();
+
+$('loadBtn').onclick = ()=> $('fileInput').click();
+$('fileInput').onchange = (e)=>{ const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ $('source').value=rd.result; $('fileName').textContent=f.name; }; rd.readAsText(f); };
+
+function fnCard(fn){
+  const p = perFn[fn.index] || (perFn[fn.index]={flatten:false,split:false,bogus:0,protLevel:''});
+  const div = document.createElement('div'); div.className='fn';
+  const badges = [fn.async?'<span class="badge g">async</span>':'', fn.generator?'<span class="badge g">generator</span>':'',
+    fn.directives?'<span class="badge">has &lt;@&gt;</span>':''].join('');
+  const scope = [];
+  if (fn.params.length) scope.push(`<b>params</b> ${fn.params.join(', ')}`);
+  if (fn.locals.length) scope.push(`<b>locals</b> ${fn.locals.join(', ')}`);
+  if (fn.upvalues.length) scope.push(`<b>upvalues</b> ${fn.upvalues.join(', ')}`);
+  div.innerHTML = `
+    <div class="top"><span class="name">${fn.name}</span><span class="idx">#${fn.index}</span>${badges}</div>
+    <div class="scope">${scope.join(' &nbsp;·&nbsp; ') || '(no named bindings)'}</div>
+    <div class="toggles">
+      <label><input type="checkbox" data-k="flatten"> flatten</label>
+      <label><input type="checkbox" data-k="split"> split</label>
+      <label>bogus <select data-k="bogus"><option>0</option><option>1</option><option>2</option><option>3</option></select></label>
+      <label>cipher <select data-k="protLevel"><option value="">–</option><option>0</option><option>1</option><option>2</option><option>3</option></select></label>
+    </div>`;
+  const set = (k,v)=>{ p[k]=v; };
+  div.querySelector('[data-k=flatten]').checked = p.flatten;
+  div.querySelector('[data-k=split]').checked = p.split;
+  div.querySelector('[data-k=bogus]').value = String(p.bogus||0);
+  div.querySelector('[data-k=protLevel]').value = p.protLevel===''?'':String(p.protLevel);
+  div.querySelector('[data-k=flatten]').onchange = e=>set('flatten',e.target.checked);
+  div.querySelector('[data-k=split]').onchange = e=>set('split',e.target.checked);
+  div.querySelector('[data-k=bogus]').onchange = e=>set('bogus',parseInt(e.target.value,10));
+  div.querySelector('[data-k=protLevel]').onchange = e=>set('protLevel', e.target.value===''?'':parseInt(e.target.value,10));
+  return div;
+}
+
+async function analyze(){
+  $('analyzeBtn').disabled = true;
+  const res = await api('/analyze', { source:$('source').value, optimize:optimizeOn() });
+  $('analyzeBtn').disabled = false;
+  const list = $('fnlist'); list.innerHTML='';
+  if (!res.ok){ list.innerHTML = `<div class="err">${res.error}</div>`; $('bulk').hidden=true; return; }
+  lastAnalyzeOptimize = res.result.optimize;
+  lastAnalysis = res.result.functions;
+  // preserve existing perFn entries only when index count matches
+  res.result.functions.forEach(fn=> list.appendChild(fnCard(fn)));
+  $('bulk').hidden = false;
+  renderMap(lastAnalysis);
+}
+$('analyzeBtn').onclick = analyze;
+
+const ID_COLOR = { vm:'#ff9e64', nativejs:'#7ee0a2', client:'#5b9dff', deadcode:'#ff6b6b' };
+// Map: a scope / closure tree — root(vm) -> functions -> nested closures, each
+// node showing its variables (params/locals) and captured upvalues.
+function renderMap(fns){
+  const box = $('tab-map');
+  if (!fns || !fns.length){ box.innerHTML = '<span class="hint">Analyze or build to see the map.</span>'; return; }
+  const kids = {}; fns.forEach(f=>{ const p = (f.parent==null?-1:f.parent); (kids[p]=kids[p]||[]).push(f); });
+  const esc = (s)=> String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const nodeHtml = (f, depth)=>{
+    const col = ID_COLOR[f.identity]||'#5b9dff';
+    const vars = [];
+    if (f.params && f.params.length) vars.push('<span style="color:#9aa4b2">params</span> '+esc(f.params.join(', ')));
+    if (f.locals && f.locals.length) vars.push('<span style="color:#9aa4b2">locals</span> '+esc(f.locals.join(', ')));
+    const ups = (f.upvalues&&f.upvalues.length)? '<div style="color:#ffb454;font-size:11px">↳ captures: '+esc(f.upvalues.join(', '))+'</div>':'';
+    let h = `<div style="margin-left:${depth*22}px;border-left:3px solid ${col};padding:4px 8px;margin-top:6px;background:#141821;border-radius:5px">`+
+      `<div><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${col};margin-right:6px"></span>`+
+      `<b style="font-family:ui-monospace,monospace">${esc(f.name)}</b> <span style="color:#9aa4b2;font-size:11px">#${f.index} · ${f.identity}${f.async?' · async':''}${f.generator?' · gen':''}</span></div>`+
+      (vars.length? '<div style="font-family:ui-monospace,monospace;font-size:11px;color:#e6e9ef">'+vars.join(' &nbsp; ')+'</div>':'')+ ups + '</div>';
+    const cs = kids[f.index]||[];
+    for (const c of cs) h += nodeHtml(c, depth+1);
+    return h;
+  };
+  const roots = (kids[-1]||[]).concat(fns.filter(f=>f.parent!=null && f.parent>=0 && !fns[f.parent]));
+  let html = '<div style="font-size:11px;color:#9aa4b2;margin-bottom:6px">variables → functions → closures/nests · colour = identity (vm / nativejs / client)</div>';
+  for (const r of (kids[-1]||[])) html += nodeHtml(r, 0);
+  box.innerHTML = html;
+}
+
+$('bulk').onclick = (e)=>{
+  const cmd = e.target.getAttribute('data-all'); if(!cmd) return;
+  for (const k of Object.keys(perFn)){
+    if (cmd==='clear'){ perFn[k]={flatten:false,split:false,bogus:0,protLevel:''}; }
+    else if (cmd==='flat'){ perFn[k].flatten=true; }
+    else if (cmd==='split'){ perFn[k].split=true; }
+    else if (cmd==='bogus'){ perFn[k].bogus=2; }
+  }
+  analyze(); // re-render with updated state
+};
+
+function collectBuildBody(){
+  const cipher = $('i_cipher').value;
+  const perFnPayload = {};
+  for (const k of Object.keys(perFn)){
+    const p = perFn[k]; const o = {};
+    if (p.flatten) o.flatten=true; if (p.split) o.split=true;
+    if (p.bogus>0) o.bogus=p.bogus; if (p.protLevel!=='' ) o.protLevel=p.protLevel;
+    if (Object.keys(o).length) perFnPayload[k]=o;
+  }
+  return {
+    source:$('source').value, target:$('target').value, seed:$('seed').value,
+    profile:$('profile').value, prod:$('prod').checked,
+    interpreter:{ permute:$('i_permute').checked, fuse:$('i_fuse').checked, conceal:$('i_conceal').checked,
+      mutateHandlers:$('i_mutate').checked, loaderForm:$('i_loader').value, arch:$('i_arch').value,
+      cipherRounds: cipher===''?undefined:parseInt(cipher,10),
+      randomize:$('i_randomize').checked, minify:$('i_minify').checked },
+    child:{ flatten:$('c_flatten').checked, split:$('c_split').checked, bogus:parseInt($('c_bogus').value,10),
+      encStr:$('c_encstr').value, encNum:$('c_encnum').checked, dud:$('c_dud').checked, dudCount:parseInt($('c_dudcount').value,10),
+      renameSymbols:$('c_rename').checked, optimize:$('c_optimize').checked },
+    limits:{ maxSteps:parseInt($('r_steps').value,10)||0, maxDepth:parseInt($('r_depth').value,10)||0,
+      maxObjects:parseInt($('r_objects').value,10)||0, maxString:parseInt($('r_string').value,10)||0 },
+    sign: $('r_sign').value.trim(),
+    perFn: perFnPayload,
+  };
+}
+
+async function build(){
+  $('buildBtn').disabled = true; $('buildBtn').textContent='Building…';
+  const res = await api('/build', collectBuildBody());
+  $('buildBtn').disabled = false; $('buildBtn').textContent='Build VM';
+  if (!res.ok){
+    showTab('error'); $('tab-error').textContent = (res.error||'build failed') + (res.stack? '\n\n'+res.stack : '');
+    $('stats').textContent = 'Build failed.'; return;
+  }
+  lastOutput = res.output;
+  const s = res.stats;
+  $('stats').innerHTML = `<span class="stat"><b>${s.numFns}</b> fns</span>`+
+    `<span class="stat"><b>${s.dudFns}</b> decoys</span>`+
+    `<span class="stat">image <b>${s.imageSize}</b>B</span>`+
+    `<span class="stat"><b>${s.renameCount}</b> renamed</span>`+
+    `<span class="stat"><b>${s.encStrCount}</b> enc-str</span>`+
+    `<span class="stat"><b>${s.encNumCount||0}</b> enc-num</span>`+
+    `<span class="stat">${s.target} · ${s.checksum}</span>`;
+  $('tab-summary').textContent = res.summary;
+  $('tab-source').textContent = res.output;
+  renderAdded(res);
+  // build the map: prefer the scope-rich analyze data; fall back to build fns
+  if (lastAnalysis) renderMap(lastAnalysis);
+  else renderMap((res.functions||[]).map(f=>({ index:f.index, name:f.name, identity:f.identity, parent:f.index===0?-1:0, params:[], locals:[], upvalues:[] })));
+  showTab('summary');
+}
+$('buildBtn').onclick = build;
+
+// Added tab: the names/consts protection injected + the decoy "source".
+function renderAdded(res){
+  const esc = (s)=> String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  let h = '';
+  const rm = res.renameMap||{};
+  const rk = Object.keys(rm);
+  h += `<div style="color:#7ee0a2">## Renamed symbols (original → added name)  [${rk.length}]</div>`;
+  h += rk.length? rk.map(k=>`  ${esc(k)}  →  ${esc(rm[k])}`).join('\n') : '  (renaming disabled)';
+  const cs = res.consts||[];
+  h += `\n\n<div style="color:#7ee0a2">## Constant pool  [${cs.length}${cs.length>=400?'+ (truncated)':''}]</div>`;
+  h += cs.map((c,i)=>`  [${i}] ${esc(c)}`).join('\n');
+  const dc = res.decoys||[];
+  h += `\n\n<div style="color:#7ee0a2">## Decoy functions (source)  [${dc.length}]</div>`;
+  h += dc.map(d=>`  ${esc(d.name)}(${d.nparams}p ${d.nlocals}l, ${d.protLevel} rounds):\n`+ (d.ops||[]).map(o=>'      '+esc(o)).join('\n')).join('\n\n') || '  (none)';
+  $('tab-added').innerHTML = h;
+}
+
+function showTab(name){
+  for (const t of ['summary','map','added','source','error']) $('tab-'+t).hidden = (t!==name);
+  document.querySelectorAll('.tabs button[data-tab]').forEach(b=> b.classList.toggle('active', b.getAttribute('data-tab')===name));
+}
+document.querySelectorAll('.tabs button[data-tab]').forEach(b=> b.onclick=()=>showTab(b.getAttribute('data-tab')));
+
+$('dlBtn').onclick = ()=>{
+  if(!lastOutput) return;
+  const ext = $('target').value==='lua'?'lua':'js';
+  const blob = new Blob([lastOutput],{type:'text/plain'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='vm-out.'+ext; a.click();
+};
+</script>
+</body>
+</html>

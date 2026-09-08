@@ -1,0 +1,4 @@
+// A simple greeting.
+let name = "world";
+print "hello, " + name + "!";
+print 2 + 3 * 4;
